@@ -40,7 +40,7 @@ func (t *Issuer) GenJWT(ID uuid.UUID) (string, error) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(token)
+	return token.SignedString(t.secret)
 }
 
 func (t *Issuer) ValJWT(tokenStr string) (Claims, error) {

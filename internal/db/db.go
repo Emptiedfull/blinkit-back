@@ -11,6 +11,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+//go:embed schema.sql
+var schemaSQL string
+
 func NewDB(ctx context.Context, DbURL string) (*pgxpool.Pool, error) {
 	cfg, err := pgxpool.ParseConfig(DbURL)
 	if err != nil {
@@ -30,6 +33,11 @@ func NewDB(ctx context.Context, DbURL string) (*pgxpool.Pool, error) {
 	if err := pool.Ping(pingCtx); err != nil {
 		pool.Close()
 		return nil, fmt.Errorf("ping db: %w", err)
+	}
+
+	if _, err := pool.Exec(ctx, schemaSQL); err != nil {
+		pool.Close()
+		return nil, fmt.Errorf("apply schema: %w", err)
 	}
 
 	return pool, nil

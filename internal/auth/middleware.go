@@ -22,6 +22,7 @@ func (t *Issuer) Require(next http.HandlerFunc) http.HandlerFunc {
 		claims, err := t.ValJWT(parts[1])
 		if err != nil {
 			httpx.WriteError(w, http.StatusUnauthorized, "invalid auth token")
+			return
 		}
 
 		ctx := context.WithValue(r.Context(), "claims", claims)
@@ -30,8 +31,8 @@ func (t *Issuer) Require(next http.HandlerFunc) http.HandlerFunc {
 }
 
 func UserFromCtx(ctx context.Context) (uuid.UUID, bool) {
-	id, ok := ctx.Value("user").(uuid.UUID)
-	return id, ok
+	claims, ok := ctx.Value("claims").(Claims)
+	return claims.ID, ok
 
 }
 

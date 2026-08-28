@@ -34,8 +34,8 @@ func main() {
 	mux.HandleFunc("POST /wallet/topup", handler.TopUpWallet)
 
 	mux.HandleFunc("POST /items", handler.CreateItem)
-	mux.HandleFunc("GET /items", handler.GetItem)
-	mux.HandleFunc("GET /items/{id}", handler.ListItems)
+	mux.HandleFunc("GET /items", handler.ListItems)
+	mux.HandleFunc("GET /items/{id}", handler.GetItem)
 
 	mux.HandleFunc("GET /cart", handler.ViewCart)
 	mux.HandleFunc("POST /cart/items", handler.AddCartItem)

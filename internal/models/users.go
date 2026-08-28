@@ -14,11 +14,11 @@ import (
 )
 
 type User struct {
-	UserID     uuid.UUID     `db:"id"`
-	UserName   string        `db:"username"`
-	Email      string        `db:"email"`
-	HashedPass string        `db:"hashedpass"`
-	CreatedAt  time.Duration `db:"created_at"`
+	UserID     uuid.UUID `db:"id"`
+	UserName   string    `db:"name"`
+	Email      string    `db:"email"`
+	HashedPass string    `db:"password_hash"`
+	CreatedAt  time.Time `db:"created_at"`
 }
 
 func CreateUser(ctx context.Context, pool *pgxpool.Pool, email, hashpassword, name string) (User, error) {
@@ -39,7 +39,7 @@ func CreateUser(ctx context.Context, pool *pgxpool.Pool, email, hashpassword, na
 			return err
 		}
 
-		u, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[User])
+		u, err = pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[User])
 		if err != nil {
 			return err
 		}

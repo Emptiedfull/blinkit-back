@@ -16,7 +16,7 @@ type Item struct {
 	SellerID    string    `db:"seller_id"`
 	Name        string    `db:"name"`
 	Description string    `db:"description"`
-	Price       float64   `db:"Balance"`
+	Price       float64   `db:"price"`
 	Category    string    `db:"category"`
 	Stock       int       `db:"stock"`
 	Unit        string    `db:"unit"`
