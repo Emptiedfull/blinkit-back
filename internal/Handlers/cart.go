@@ -94,6 +94,22 @@ func (h *ResHandler) AddCartItem(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func (h *ResHandler) RemoveCartItem(w http.ResponseWriter, r *http.Request) {
+	userId, ok := auth.UserFromCtx(r.Context())
+	if !ok {
+		httpx.WriteError(w, http.StatusNotFound, "seller dosent exist")
+		return
+	}
+
+	itemId, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		httpx.WriteError(w, http.StatusNotFound, "item not found")
+		return
+	}
+
+	models.RemoveCartItem(r.Context(), h.pool, userId, itemId)
+}
+
 func (h *ResHandler) UpdateCartItem(w http.ResponseWriter, r *http.Request) {
 	userId, ok := auth.UserFromCtx(r.Context())
 	if !ok {

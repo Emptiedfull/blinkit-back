@@ -143,6 +143,21 @@ func UpdateCartItem(ctx context.Context, pool *pgxpool.Pool, userId, itemId uuid
 	})
 }
 
+func RemoveCartItem(ctx context.Context, pool *pgxpool.Pool, userId, itemId uuid.UUID) error {
+	tag, err := pool.Exec(ctx,
+		`DELETE FROM cart_items WHERE item_id=$1 AND cart_id=(SELECT id FROM carts WHERE user_id=$2)`,
+		itemId, userId)
+	if err != nil {
+
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+
+		return errors.New("No cart item found")
+	}
+	return nil
+}
+
 func ViewCart(ctx context.Context, pool *pgxpool.Pool, userId uuid.UUID) ([]CartItem, error) {
 	rows, err := pool.Query(ctx,
 		`SELECT i.id AS item_id, i.name, i.price, i.unit, ci.quantity

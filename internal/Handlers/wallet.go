@@ -26,6 +26,7 @@ func (h *ResHandler) GetWallet(w http.ResponseWriter, r *http.Request) {
 	wallet, err := models.GetWallet(r.Context(), h.pool, userID)
 	if err != nil {
 		httpx.WriteError(w, http.StatusNotFound, err.Error())
+		return
 	}
 
 	httpx.WriteJSON(w, http.StatusOK, wallet)
