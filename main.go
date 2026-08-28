@@ -6,6 +6,7 @@ import (
 	"cc/internal/config"
 	"cc/internal/db"
 	"context"
+	"log"
 	"net/http"
 	"time"
 )
@@ -43,5 +44,9 @@ func main() {
 	mux.HandleFunc("PATCH /cart/items/{id}", issuer.Require(handler.UpdateCartItem))
 	mux.HandleFunc("DELETE /cart/items/{id}", issuer.Require(handler.RemoveCartItem))
 	mux.HandleFunc("DELETE /cart", issuer.Require(handler.ClearCart))
+
+	if err := http.ListenAndServe(":"+cfg.Port, mux); err != nil {
+		log.Fatal(err)
+	}
 
 }

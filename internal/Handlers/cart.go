@@ -23,7 +23,7 @@ type createItemRequest struct {
 
 type addCartItemRequest struct {
 	ItemID   uuid.UUID `json:"item_id"`
-	Quantity int       `json:"quantitiy"`
+	Quantity int       `json:"quantity"`
 }
 
 func (h *ResHandler) CreateItem(w http.ResponseWriter, r *http.Request) {
@@ -107,7 +107,12 @@ func (h *ResHandler) RemoveCartItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	models.RemoveCartItem(r.Context(), h.pool, userId, itemId)
+	err = models.RemoveCartItem(r.Context(), h.pool, userId, itemId)
+	if err != nil {
+		httpx.WriteError(w, http.StatusInternalServerError, fmt.Sprintf("Unable to remove cart item: %v", err))
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 }
 
 func (h *ResHandler) UpdateCartItem(w http.ResponseWriter, r *http.Request) {
