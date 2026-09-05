@@ -20,6 +20,33 @@ func (t *Issuer) Require(next http.HandlerFunc) http.HandlerFunc {
 		}
 
 		claims, err := t.ValJWT(parts[1])
+
+		if err != nil {
+			httpx.WriteError(w, http.StatusUnauthorized, "invalid auth token")
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), "claims", claims)
+		next(w, r.WithContext(ctx))
+	}
+}
+
+func (t *Issuer) RequireRole(role string, next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		header := r.Header.Get("Authorization")
+		parts := strings.SplitN(header, " ", 2)
+
+		if len(parts) != 2 || parts[0] != "Bearer" {
+			httpx.WriteError(w, http.StatusUnauthorized, "missing auth token")
+			return
+		}
+
+		claims, err := t.ValJWT(parts[1])
+
+		if claims.Role != role {
+			httpx.WriteError(w, http.StatusUnauthorized, "invalid auth token")
+			return
+		}
 		if err != nil {
 			httpx.WriteError(w, http.StatusUnauthorized, "invalid auth token")
 			return
@@ -34,6 +61,11 @@ func UserFromCtx(ctx context.Context) (uuid.UUID, bool) {
 	claims, ok := ctx.Value("claims").(Claims)
 	return claims.ID, ok
 
+}
+
+func RoleFromCtx(ctx context.Context) (string, bool) {
+	claims, ok := ctx.Value("claims").(Claims)
+	return claims.Role, ok
 }
 
 // type JsonErr struct {

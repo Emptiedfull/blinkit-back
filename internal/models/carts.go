@@ -4,81 +4,19 @@ import (
 	"cc/internal/db"
 	"context"
 	"errors"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type Item struct {
-	ID          uuid.UUID `db:"id"`
-	SellerID    string    `db:"seller_id"`
-	Name        string    `db:"name"`
-	Description string    `db:"description"`
-	Price       float64   `db:"price"`
-	Category    string    `db:"category"`
-	Stock       int       `db:"stock"`
-	Unit        string    `db:"unit"`
-	ImageURL    string    `db:"image_url"`
-	CreatedAt   time.Time `db:"created_at"`
-	UpdatedAt   time.Time `db:"updated_at"`
-}
-
 type CartItem struct {
-	ItemID   string  `db:"item_id"`
-	Name     string  `db:"name"`
-	Price    float64 `db:"price"`
-	Unit     string  `db:"unit"`
-	Quantity int     `db:"quantity"`
-}
-
-func CreateItem(ctx context.Context, pool *pgxpool.Pool, Name string, Description string, SellerID uuid.UUID, Price float64, Category string, Stock int, Unit string, ImageURL string) (Item, error) {
-	rows, err := pool.Query(ctx,
-		`INSERT INTO items (seller_id, name, description, price, category, stock, unit, image_url)
-			 VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-			 RETURNING id, seller_id, name, description, price, category, stock, unit, image_url, created_at, updated_at`,
-		SellerID, Name, Description, Price, Category, Stock, Unit, ImageURL,
-	)
-	if err != nil {
-		return Item{}, err
-	}
-
-	item, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[Item])
-	if err != nil {
-
-		return Item{}, err
-	}
-
-	return item, nil
-}
-
-func ListItems(ctx context.Context, pool *pgxpool.Pool) ([]Item, error) {
-	rows, err := pool.Query(ctx,
-		`SELECT id, seller_id, name, description, price, category, stock, unit, image_url, created_at, updated_at
-			 FROM items ORDER BY created_at DESC`)
-	if err != nil {
-
-		return []Item{}, nil
-	}
-	items, err := pgx.CollectRows(rows, pgx.RowToStructByName[Item])
-	if err != nil {
-
-		return []Item{}, nil
-	}
-	return items, nil
-}
-
-func GetItemByID(ctx context.Context, pool *pgxpool.Pool, id uuid.UUID) (Item, error) {
-	rows, err := pool.Query(ctx,
-		`SELECT id, seller_id, name, description, price, category, stock, unit, image_url, created_at, updated_at
-			 FROM items WHERE id=$1`, id)
-	if err != nil {
-
-		return Item{}, err
-	}
-	item, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[Item])
-	return item, err
+	ItemID   uuid.UUID `db:"item_id"`
+	SellerID uuid.UUID `db:"seller_id"`
+	Name     string    `db:"name"`
+	Price    float64   `db:"price"`
+	Unit     string    `db:"unit"`
+	Quantity int       `db:"quantity"`
 }
 
 func createCart(ctx context.Context, tx pgx.Tx, userID string) error {
@@ -175,6 +113,79 @@ func ViewCart(ctx context.Context, pool *pgxpool.Pool, userId uuid.UUID) ([]Cart
 	}
 
 	return lines, nil
+}
+
+func CheckOut(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID) (uuid.UUID, error) {
+	var orderID uuid.UUID
+
+	err := db.DoTx(ctx, pool, func(ctx context.Context, tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `SELECT i.id AS item_id, i.seller_id, i.price, ci.quantity
+			 FROM cart_items ci
+			 JOIN carts c ON c.id = ci.cart_id
+			 JOIN items i ON i.id = ci.item_id
+			 WHERE c.user_id = $1`,
+			userID)
+
+		if err != nil {
+			return err
+		}
+
+		items, err := pgx.CollectRows(rows, pgx.RowToStructByName[CartItem])
+		if err != nil {
+			return err
+		}
+
+		if len(items) == 0 {
+			return errors.New("Cart empty")
+		}
+
+		if err := tx.QueryRow(ctx,
+			`INSERT INTO orders (user_id) VALUES ($1) RETURNING id`, userID,
+		).Scan(&orderID); err != nil {
+			return err
+		}
+
+		var total float64
+		for _, item := range items {
+			var stock int
+			if err := tx.QueryRow(ctx, `SELECT stock FROM items WHERE id=$1 FOR UPDATE`, item.ItemID).Scan(&stock); err != nil {
+				return err
+			}
+
+			if stock < item.Quantity {
+				return errors.New("Out of stock")
+			}
+
+			_, err := tx.Exec(ctx,
+				`UPDATE items SET stock = stock - $1, updated_at = now() WHERE id=$2`,
+				item.Quantity, item.ItemID,
+			)
+			if err != nil {
+				return err
+			}
+
+			if _, err := tx.Exec(ctx,
+				`INSERT INTO order_items (order_id, item_id, seller_id, quantity, price_at_purchase)
+				 VALUES ($1,$2,$3,$4,$5)`,
+				orderID, item.ItemID, item.SellerID, item.Quantity, item.Price,
+			); err != nil {
+				return err
+			}
+
+			total += item.Price * float64(item.Quantity)
+
+		}
+		if err := DebitWallet(ctx, tx, userID, total); err != nil {
+			return err
+		}
+
+		_, err = tx.Exec(ctx,
+			`DELETE FROM cart_items WHERE cart_id=(SELECT id FROM carts WHERE user_id=$1)`, userID)
+		return err
+
+	})
+
+	return orderID, err
 }
 
 func ClearCart(ctx context.Context, pool *pgxpool.Pool, userId uuid.UUID) error {

@@ -16,23 +16,20 @@ import (
 type User struct {
 	UserID     uuid.UUID `db:"id"`
 	UserName   string    `db:"name"`
+	Role       string    `db:"role"`
 	Email      string    `db:"email"`
 	HashedPass string    `db:"password_hash"`
 	CreatedAt  time.Time `db:"created_at"`
 }
 
-func CreateUser(ctx context.Context, pool *pgxpool.Pool, email, hashpassword, name string) (User, error) {
-	// hash, err := auth.HashPass(password)
-	// if err != nil {
-	// 	return User{}, err
-	// }
+func CreateUser(ctx context.Context, pool *pgxpool.Pool, email, hashpassword, name, role string) (User, error) {
 
 	var u User
 	err := db.DoTx(ctx, pool, func(ctx context.Context, tx pgx.Tx) error {
 		rows, err := tx.Query(ctx,
-			`INSERT INTO users (email, password_hash, name) VALUES ($1,$2,$3)
+			`INSERT INTO users (email, password_hash, name,role) VALUES ($1,$2,$3,$4)
 			 RETURNING id, email, password_hash, name, created_at`,
-			email, hashpassword, name,
+			email, hashpassword, name, role,
 		)
 
 		if err != nil {
@@ -44,13 +41,10 @@ func CreateUser(ctx context.Context, pool *pgxpool.Pool, email, hashpassword, na
 			return err
 		}
 
-		if _, err := tx.Exec(ctx, `INSERT INTO wallets (user_id) VALUES ($1)`, u.UserID); err != nil {
+		if err := createWallet(ctx, tx, u.UserID.String()); err != nil {
 			return err
 		}
-		if _, err := tx.Exec(ctx, `INSERT INTO carts (user_id) VALUES ($1)`, u.UserID); err != nil {
-			return err
-		}
-		return nil
+		return createCart(ctx, tx, u.UserID.String())
 	})
 
 	if err != nil {

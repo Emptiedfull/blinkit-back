@@ -11,7 +11,8 @@ import (
 )
 
 type Claims struct {
-	ID uuid.UUID `json:"user_id"`
+	ID   uuid.UUID `json:"user_id"`
+	Role string    `json:"role"`
 	jwt.RegisteredClaims
 }
 
@@ -29,11 +30,13 @@ func NewIssuer(secret []byte, acc time.Duration, ref time.Duration) *Issuer {
 	}
 }
 
-func (t *Issuer) GenJWT(ID uuid.UUID) (string, error) {
+func (t *Issuer) GenJWT(ID uuid.UUID, Role string) (string, error) {
 	now := time.Now()
 	claims := Claims{
-		ID: ID,
+		ID:   ID,
+		Role: Role,
 		RegisteredClaims: jwt.RegisteredClaims{
+
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(t.accessTTL)),
 		},

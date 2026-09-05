@@ -11,6 +11,9 @@ import (
 	"time"
 )
 
+const buyer = "buyer"
+const seller = "seller"
+
 func main() {
 	mux := http.NewServeMux()
 	cfg, err := config.GetConfig()
@@ -32,16 +35,23 @@ func main() {
 	mux.HandleFunc("POST /auth/logout", issuer.Require(handler.Logout))
 
 	mux.HandleFunc("GET /wallet", issuer.Require(handler.GetWallet))
-	mux.HandleFunc("POST /wallet/topup", handler.TopUpWallet)
+	mux.HandleFunc("POST /wallet/topup", issuer.RequireRole(buyer, handler.TopUpWallet))
 
-	mux.HandleFunc("POST /items", issuer.Require(handler.CreateItem))
+	mux.HandleFunc("POST /items", issuer.RequireRole(seller, handler.CreateItem))
+	mux.HandleFunc("PATCH /items/{id}", issuer.RequireRole(seller, handler.UpdateItem))
+	mux.HandleFunc("DELETE /items/{id}", issuer.RequireRole(seller, handler.DeleteItem))
+
+	mux.HandleFunc("POST /items/{id}/rate", issuer.RequireRole(buyer, handler.RateItem))
 
 	mux.HandleFunc("GET /items", handler.ListItems)
 	mux.HandleFunc("GET /items/{id}", handler.GetItem)
 
+	mux.HandleFunc("GET /seller/items", issuer.RequireRole("seller", handler.SellerInventory))
+	mux.HandleFunc("GET /seller/orders", issuer.RequireRole("seller", handler.SellerOrders))
+
 	mux.HandleFunc("GET /cart", issuer.Require(handler.ViewCart))
 	mux.HandleFunc("POST /cart/items", issuer.Require(handler.AddCartItem))
-	mux.HandleFunc("PATCH /cart/items/{id}", issuer.Require(handler.UpdateCartItem))
+	mux.HandleFunc("PATCH /cart/items/{id}", issuer.RequireRole(buyer, handler.UpdateCartItem))
 	mux.HandleFunc("DELETE /cart/items/{id}", issuer.Require(handler.RemoveCartItem))
 	mux.HandleFunc("DELETE /cart", issuer.Require(handler.ClearCart))
 

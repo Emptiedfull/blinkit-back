@@ -3,6 +3,7 @@ package models
 import (
 	"cc/internal/db"
 	"context"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -57,4 +58,23 @@ func TopUpWallet(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID, amou
 		return err
 	}
 	return nil
+}
+
+func DebitWallet(ctx context.Context, tx pgx.Tx, user uuid.UUID, amount float64) error {
+	var balance float64
+	if err := tx.QueryRow(ctx, `SELECT balance FROM wallets WHERE user_id=$1 FOR UPDATE`, user).Scan(&balance); err != nil {
+		return err
+	}
+
+	if balance < amount {
+		return errors.New("Insufficient Balance")
+	}
+
+	if _, err := tx.Exec(ctx, `UPDATE wallets SET balance=balance-$1, updated_at=now() WHERE user_id=$2`, amount, user); err != nil {
+		return err
+	}
+	_, err := tx.Exec(ctx,
+		`INSERT INTO wallet_transactions (wallet_id, amount, type)
+		 SELECT id, $1, 'debit' FROM wallets WHERE user_id=$2`, -amount, user)
+	return err
 }

@@ -34,9 +34,21 @@ func (h *ResHandler) GetWallet(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ResHandler) TopUpWallet(w http.ResponseWriter, r *http.Request) {
+
+	userID, ok := auth.UserFromCtx(r.Context())
+	if !ok {
+		httpx.WriteError(w, http.StatusUnauthorized, "no user found")
+		return
+	}
+
 	var req TopUpRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		httpx.WriteError(w, http.StatusBadRequest, "invalid topup")
+		return
+	}
+
+	if userID != req.ID {
+		httpx.WriteError(w, http.StatusUnauthorized, "no user found")
 		return
 	}
 

@@ -18,6 +18,7 @@ type LoginRequest struct {
 type SignUpRequest struct {
 	Email    string `json:"email"`
 	Name     string `json:"name"`
+	Role     string `json:"role"`
 	Password string `json:"password"`
 }
 
@@ -35,9 +36,15 @@ func (h *ResHandler) HandleSignup(w http.ResponseWriter, r *http.Request) {
 	passwordHash, err := auth.HashPass(req.Password)
 	if err != nil {
 		httpx.WriteError(w, http.StatusBadRequest, "Unable to process password")
+		return
 	}
 
-	user, err := models.CreateUser(r.Context(), h.pool, req.Email, passwordHash, req.Name)
+	if req.Role != "buyer" && req.Role != "seller" {
+		httpx.WriteError(w, http.StatusBadRequest, "role must be 'buyer' or 'seller'")
+		return
+	}
+
+	user, err := models.CreateUser(r.Context(), h.pool, req.Email, passwordHash, req.Name, req.Role)
 	if err != nil {
 		if db.IsUniqueViolation(err) {
 			httpx.WriteError(w, http.StatusConflict, "user already exists")
@@ -45,6 +52,7 @@ func (h *ResHandler) HandleSignup(w http.ResponseWriter, r *http.Request) {
 		}
 
 		httpx.WriteError(w, http.StatusInternalServerError, "Unable to create user")
+		return
 	}
 
 	h.issueTokenAndRespond(w, r, user)

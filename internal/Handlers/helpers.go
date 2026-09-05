@@ -35,7 +35,7 @@ func NewHandler(pool *pgxpool.Pool, Issuer *auth.Issuer) *ResHandler {
 }
 
 func (h *ResHandler) issueTokenAndRespond(w http.ResponseWriter, r *http.Request, user models.User) {
-	token, err := h.Issuer.GenJWT(user.UserID)
+	token, err := h.Issuer.GenJWT(user.UserID, user.Role)
 	if err != nil {
 		httpx.WriteError(w, http.StatusInternalServerError, "could not issue token")
 		return
