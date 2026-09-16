@@ -53,8 +53,8 @@ func main() {
 	mux.HandleFunc("GET /api/seller/orders", issuer.RequireRole("seller", handler.SellerOrders))
 
 	mux.HandleFunc("GET /api/cart", issuer.Require(handler.ViewCart))
-	mux.HandleFunc("POST /api/cart/items", issuer.Require(handler.AddCartItem))
-	mux.HandleFunc("PATCH /api/cart/items/{id}", issuer.RequireRole(buyer, handler.UpdateCartItem))
+	mux.HandleFunc("POST /api/cart/items", issuer.RequireRole(seller, handler.AddCartItem))
+	mux.HandleFunc("PATCH /api/cart/items/{id}", issuer.RequireRole(seller, handler.UpdateCartItem))
 	mux.HandleFunc("DELETE /api/cart/items/{id}", issuer.Require(handler.RemoveCartItem))
 	mux.HandleFunc("DELETE /api/cart", issuer.Require(handler.ClearCart))
 
