@@ -32,29 +32,14 @@ func (t *Issuer) Require(next http.HandlerFunc) http.HandlerFunc {
 }
 
 func (t *Issuer) RequireRole(role string, next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		header := r.Header.Get("Authorization")
-		parts := strings.SplitN(header, " ", 2)
-
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			httpx.WriteError(w, http.StatusUnauthorized, "missing auth token")
+	return t.Require(func(w http.ResponseWriter, r *http.Request) {
+		actualRole, ok := RoleFromCtx(r.Context())
+		if !ok || actualRole != role {
+			httpx.WriteError(w, http.StatusForbidden, "action not allowed")
 			return
 		}
-
-		claims, err := t.ValJWT(parts[1])
-
-		if claims.Role != role {
-			httpx.WriteError(w, http.StatusUnauthorized, "invalid auth token")
-			return
-		}
-		if err != nil {
-			httpx.WriteError(w, http.StatusUnauthorized, "invalid auth token")
-			return
-		}
-
-		ctx := context.WithValue(r.Context(), "claims", claims)
-		next(w, r.WithContext(ctx))
-	}
+		next(w, r)
+	})
 }
 
 func UserFromCtx(ctx context.Context) (uuid.UUID, bool) {

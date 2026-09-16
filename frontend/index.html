@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Marketplace</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script>
+      // Same-origin by default: cmd/web proxies /api -> the Go API, which keeps
+      // the browser from needing CORS headers the API does not send.
+      // Override in the console to talk to another host, e.g.
+      //   localStorage.setItem("cc.apiBase", "http://localhost:8070")
+      window.__API_BASE__ = localStorage.getItem("cc.apiBase") || "/api";
+    </script>
+  </head>
+  <body>
+    <header class="topbar">
+      <span class="brand">Marketplace</span>
+      <nav class="nav" id="nav"></nav>
+      <div class="whoami" id="whoami"></div>
+    </header>
+
+    <main id="view"></main>
+    <div class="toasts" id="toasts"></div>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

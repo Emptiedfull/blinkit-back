@@ -42,12 +42,12 @@ func GetSellerInventory(ctx context.Context, pool *pgxpool.Pool, sellerID uuid.U
 }
 
 type SellerOrderItem struct {
-	ID        uuid.UUID `db:"id"`
+	ID        uuid.UUID `db:"order_id"`
 	ItemID    uuid.UUID `db:"item_id"`
 	BuyerID   uuid.UUID `db:"buyer_id"`
 	ItemName  string    `db:"item_name"`
 	Quantity  int       `db:"quantity"`
-	PriceATM  float64   `db:"price_atm"`
+	PriceATM  float64   `db:"price_at_purchase`
 	CreatedAt time.Time `db:"created_at"`
 }
 

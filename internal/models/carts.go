@@ -107,7 +107,7 @@ func ViewCart(ctx context.Context, pool *pgxpool.Pool, userId uuid.UUID) ([]Cart
 
 		return []CartItem{}, err
 	}
-	lines, err := pgx.CollectRows(rows, pgx.RowToStructByName[CartItem])
+	lines, err := pgx.CollectRows(rows, pgx.RowToStructByNameLax[CartItem])
 	if err != nil {
 		return []CartItem{}, err
 	}
@@ -130,7 +130,7 @@ func CheckOut(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID) (uuid.U
 			return err
 		}
 
-		items, err := pgx.CollectRows(rows, pgx.RowToStructByName[CartItem])
+		items, err := pgx.CollectRows(rows, pgx.RowToStructByNameLax[CartItem])
 		if err != nil {
 			return err
 		}

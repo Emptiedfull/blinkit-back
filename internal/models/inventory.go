@@ -93,7 +93,8 @@ func FilterItems(ctx context.Context, pool *pgxpool.Pool, filter ItemFilter) ([]
 		base += " ORDER BY i.price DESC"
 	case rating:
 		base += " ORDER BY average_rating DESC"
-
+	case age:
+		base += " ORDER BY i.created_at DESC"
 	}
 
 	rows, err := pool.Query(ctx, base, args...)
@@ -109,7 +110,7 @@ func CreateItem(ctx context.Context, pool *pgxpool.Pool, Name string, Descriptio
 	rows, err := pool.Query(ctx,
 		`INSERT INTO items (seller_id, name, description, price, category, stock, unit, image_url)
 			 VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-			 RETURNING id, seller_id, name, description, price, category, stock, unit, image_url, created_at, updated_at`,
+			 RETURNING id, seller_id, name, description, price, category, stock, unit, image_url, created_at, updated_at, 0 AS average_rating`,
 		SellerID, Name, Description, Price, Category, Stock, Unit, ImageURL,
 	)
 	if err != nil {
@@ -127,8 +128,12 @@ func CreateItem(ctx context.Context, pool *pgxpool.Pool, Name string, Descriptio
 
 func ListItems(ctx context.Context, pool *pgxpool.Pool) ([]Item, error) {
 	rows, err := pool.Query(ctx,
-		`SELECT id, seller_id, name, description, price, category, stock, unit, image_url, created_at, updated_at, COALESCE(AVG(r.rating), 0) AS average_rating
-			 FROM items ORDER BY created_at DESC`)
+		`SELECT i.id, i.seller_id, i.name, i.description, i.price, i.category, i.stock, i.unit, i.image_url, i.created_at, i.updated_at,
+		        COALESCE(AVG(r.rating), 0) AS average_rating
+		 FROM items i
+		 LEFT JOIN ratings r ON r.item_id = i.id
+		 GROUP BY i.id
+		 ORDER BY i.created_at DESC`)
 	if err != nil {
 
 		return []Item{}, nil
@@ -143,8 +148,12 @@ func ListItems(ctx context.Context, pool *pgxpool.Pool) ([]Item, error) {
 
 func GetItemByID(ctx context.Context, pool *pgxpool.Pool, id uuid.UUID) (Item, error) {
 	rows, err := pool.Query(ctx,
-		`SELECT id, seller_id, name, description, price, category, stock, unit, image_url, created_at, updated_at, COALESCE(AVG(r.rating), 0) AS average_rating
-			 FROM items WHERE id=$1`, id)
+		`SELECT i.id, i.seller_id, i.name, i.description, i.price, i.category, i.stock, i.unit, i.image_url, i.created_at, i.updated_at,
+		        COALESCE(AVG(r.rating), 0) AS average_rating
+		 FROM items i
+		 LEFT JOIN ratings r ON r.item_id = i.id
+		 WHERE i.id=$1
+		 GROUP BY i.id`, id)
 	if err != nil {
 
 		return Item{}, err
@@ -158,7 +167,8 @@ func UpdateItem(ctx context.Context, pool *pgxpool.Pool, id, sellerID uuid.UUID,
 		`UPDATE items SET
 		   name=$1, description=$2, price=$3, category=$4, stock=$5, unit=$6, image_url=$7, updated_at=now()
 		 WHERE id=$8 AND seller_id=$9
-		 RETURNING id, seller_id, name, description, price, category, stock, unit, image_url, created_at, updated_at`,
+		 RETURNING id, seller_id, name, description, price, category, stock, unit, image_url, created_at, updated_at,  (SELECT COALESCE(AVG(r.rating), 0)
+             FROM ratings r WHERE r.item_id = items.id) AS average_rating`,
 		name, description, price, category, stock, unit, imageURL, id, sellerID,
 	)
 	if err != nil {

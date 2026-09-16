@@ -43,8 +43,11 @@ func main() {
 
 	mux.HandleFunc("POST /items/{id}/rate", issuer.RequireRole(buyer, handler.RateItem))
 
-	mux.HandleFunc("GET /items", handler.ListItems)
+	// mux.HandleFunc("GET /items", handler.ListItems)
+	mux.HandleFunc("GET /items", handler.SearchItems)
 	mux.HandleFunc("GET /items/{id}", handler.GetItem)
+
+	mux.HandleFunc("POST /checkout", issuer.RequireRole(buyer, handler.Checkout))
 
 	mux.HandleFunc("GET /seller/items", issuer.RequireRole("seller", handler.SellerInventory))
 	mux.HandleFunc("GET /seller/orders", issuer.RequireRole("seller", handler.SellerOrders))

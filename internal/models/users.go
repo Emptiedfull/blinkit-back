@@ -28,7 +28,7 @@ func CreateUser(ctx context.Context, pool *pgxpool.Pool, email, hashpassword, na
 	err := db.DoTx(ctx, pool, func(ctx context.Context, tx pgx.Tx) error {
 		rows, err := tx.Query(ctx,
 			`INSERT INTO users (email, password_hash, name,role) VALUES ($1,$2,$3,$4)
-			 RETURNING id, email, password_hash, name, created_at`,
+			 RETURNING id, email, password_hash, name, created_at,role`,
 			email, hashpassword, name, role,
 		)
 
@@ -56,7 +56,7 @@ func CreateUser(ctx context.Context, pool *pgxpool.Pool, email, hashpassword, na
 
 func GetUserByEmail(ctx context.Context, pool *pgxpool.Pool, email string) (User, error) {
 	rows, err := pool.Query(ctx,
-		`SELECT id, email, password_hash, name, created_at FROM users WHERE email=$1`, email,
+		`SELECT id, email, password_hash,role, name, created_at FROM users WHERE email=$1`, email,
 	)
 	if err != nil {
 		return User{}, err
@@ -67,7 +67,7 @@ func GetUserByEmail(ctx context.Context, pool *pgxpool.Pool, email string) (User
 
 func GetUserByID(ctx context.Context, pool *pgxpool.Pool, id uuid.UUID) (User, error) {
 	rows, err := pool.Query(ctx,
-		`SELECT id, email, password_hash, name, created_at FROM users WHERE id=$1`, id,
+		`SELECT id, email, password_hash,role, name, created_at FROM users WHERE id=$1`, id,
 	)
 	if err != nil {
 		return User{}, err

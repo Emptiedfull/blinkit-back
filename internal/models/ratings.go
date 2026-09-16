@@ -38,7 +38,7 @@ func RateItem(ctx context.Context, pool *pgxpool.Pool, userID, itemID uuid.UUID,
 		return errors.New("Item not purchased")
 	}
 
-	_, err := pool.Query(ctx,
+	_, err := pool.Exec(ctx,
 		`INSERT INTO ratings (user_id, item_id, rating, review_text)
 		 VALUES ($1,$2,$3,$4)
 		 ON CONFLICT (user_id, item_id)

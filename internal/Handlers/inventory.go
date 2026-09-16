@@ -108,7 +108,7 @@ func (h *ResHandler) AddCartItem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req addCartItemRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.ItemID.String() == "" || req.Quantity <= 0 {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.ItemID == uuid.Nil || req.Quantity <= 0 {
 		httpx.WriteError(w, http.StatusBadRequest, "Invalid request")
 		return
 	}
