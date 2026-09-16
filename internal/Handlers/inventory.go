@@ -27,6 +27,7 @@ func (h *ResHandler) CreateItem(w http.ResponseWriter, r *http.Request) {
 	sellerId, ok := auth.UserFromCtx(r.Context())
 	if !ok {
 		httpx.WriteError(w, http.StatusNotFound, "seller dosent exist")
+		return
 	}
 
 	var req createItemRequest

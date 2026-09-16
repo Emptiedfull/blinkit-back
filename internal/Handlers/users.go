@@ -84,6 +84,7 @@ func (h *ResHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	id, ok := auth.UserFromCtx(r.Context())
 	if !ok {
 		httpx.WriteError(w, http.StatusUnauthorized, "not unauthorized")
+		return
 	}
 
 	var req LogOutRequest

@@ -119,11 +119,23 @@ func CheckOut(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID) (uuid.U
 	var orderID uuid.UUID
 
 	err := db.DoTx(ctx, pool, func(ctx context.Context, tx pgx.Tx) error {
+
+		var cartID uuid.UUID
+		if err := tx.QueryRow(ctx,
+			`SELECT id FROM carts WHERE user_id = $1 FOR UPDATE`, userID,
+		).Scan(&cartID); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return errors.New("no cart")
+			}
+			return err
+		}
+
 		rows, err := tx.Query(ctx, `SELECT i.id AS item_id, i.seller_id, i.price, ci.quantity
 			 FROM cart_items ci
 			 JOIN carts c ON c.id = ci.cart_id
 			 JOIN items i ON i.id = ci.item_id
-			 WHERE c.user_id = $1`,
+			 WHERE c.user_id = $1
+			 ORDER BY i.id`,
 			userID)
 
 		if err != nil {
@@ -146,6 +158,7 @@ func CheckOut(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID) (uuid.U
 		}
 
 		var total float64
+		charged := make([]uuid.UUID, 0, len(items))
 		for _, item := range items {
 			var stock int
 			if err := tx.QueryRow(ctx, `SELECT stock FROM items WHERE id=$1 FOR UPDATE`, item.ItemID).Scan(&stock); err != nil {
@@ -171,6 +184,7 @@ func CheckOut(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID) (uuid.U
 			); err != nil {
 				return err
 			}
+			charged = append(charged, item.ItemID)
 
 			total += item.Price * float64(item.Quantity)
 
@@ -180,7 +194,10 @@ func CheckOut(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID) (uuid.U
 		}
 
 		_, err = tx.Exec(ctx,
-			`DELETE FROM cart_items WHERE cart_id=(SELECT id FROM carts WHERE user_id=$1)`, userID)
+			`DELETE FROM cart_items
+WHERE cart_id = $1
+  AND item_id = ANY($2)
+`, cartID, charged)
 		return err
 
 	})

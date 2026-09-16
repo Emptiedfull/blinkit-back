@@ -47,7 +47,7 @@ type SellerOrderItem struct {
 	BuyerID   uuid.UUID `db:"buyer_id"`
 	ItemName  string    `db:"item_name"`
 	Quantity  int       `db:"quantity"`
-	PriceATM  float64   `db:"price_at_purchase`
+	PriceATM  float64   `db:"price_at_purchase"`
 	CreatedAt time.Time `db:"created_at"`
 }
 
