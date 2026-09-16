@@ -19,6 +19,8 @@ WORKDIR /app
 
 COPY --from=builder /app/server .
 
+COPY frontend/ ./frontend/
+
 ENV PORT=8080
 
 EXPOSE 8080
